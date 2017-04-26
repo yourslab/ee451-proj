@@ -65,7 +65,8 @@ int main(int argc, char** argv)
 
   //Mico, Kyle Start
 	FILE* fp;
-  int  dev = 255, alpha = .5, X_CONSTANT=128; //NEED TO SET
+  int  dev = 255, X_CONSTANT =128;
+  double alpha = .5; //NEED TO SET
   int Cr = 2, Cb = 1, Y=0;
   int background = Cr;
   int i,j,k; //loop variables
@@ -75,9 +76,9 @@ int main(int argc, char** argv)
     background = Cb;
   }
   
-  int bg_centroid = image[0][0][background];
-  int fg_centroid = bg_centroid + dev;
-  int unk_centroid = alpha* abs(bg_centroid - fg_centroid);
+  double bg_centroid = image[0][0][background];
+  double fg_centroid = bg_centroid + dev;
+  double unk_centroid = alpha* abs(bg_centroid - fg_centroid);
 
   unsigned char **cluster = (unsigned char**) malloc (sizeof(unsigned char*)*3);
   for (i = 0; i < 3; ++i) {
@@ -99,12 +100,17 @@ int main(int argc, char** argv)
   }
 
   int bg_i = 0, fg_i =1, unk_i = 2;
-  int bg_count = 0, fg_count = 0, unk_count = 0;
+  int bg_count = 0;
+int  fg_count = 0;
+int unk_count = 0;
 
 
-  for(k = 0; k < 50; k++)
+  for(int k = 0; k < 50; k++)
   {
-  	bg_count = fg_count = unk_count = 0;
+
+  	bg_count = 0;
+	fg_count = 0;
+	unk_count = 0;
   	//initial bucket allocation	
     for(i = 0; i< height; i++)
     {
@@ -117,21 +123,21 @@ int main(int argc, char** argv)
 			
         if(distance_bg < distance_fg && distance_bg < distance_unk)
         {
-        	cluster[bg_centroid][bg_count] = cur_pixel;
+        	cluster[bg_i][bg_count] = cur_pixel;
         	bg_points[bg_count][0] = i;
         	bg_points[bg_count][1] = j;
         	bg_count++;
         }
         else if(distance_fg < distance_bg && distance_fg <  distance_unk)
         {
-        	cluster[fg_centroid][fg_count] = cur_pixel;
+        	cluster[fg_i][fg_count] = cur_pixel;
         	fg_points[fg_count][0] = i;
         	fg_points[fg_count][1] = j;
         	fg_count++;
         }
         else
         {
-        	cluster[unk_centroid][unk_count] = cur_pixel;
+        	cluster[unk_i][unk_count] = cur_pixel;
         	unk_points[unk_count][0] = i;
         	unk_points[unk_count][1] = j;
         	unk_count++;
@@ -139,7 +145,7 @@ int main(int argc, char** argv)
       }
     }
 
-    //recalculate averages
+    //recalculate centroids
     unsigned char sum = 0;
     for(i = 0; i < bg_count; i++)
     {
