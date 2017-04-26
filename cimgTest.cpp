@@ -12,7 +12,7 @@ using namespace std;
 using namespace cimg_library;
 
 #define input_file  "input.raw"
-#define output_file "output.raw"
+#define output_file "output.txt"
 
 //Returns 3D Array of YCbCr Values for each pixel with [height][width][YCbCr (Y - 0, Cb - 1, Cr -2]
 int*** getYCbCr(string filename) {
@@ -212,7 +212,7 @@ int main(int argc, char** argv)
  			else region[j+k] = image[x-2+j][y-2+j][background];
   		}
   	}*/
-    cout << "qual test" << endl;  
+
 
   	//Bn and Fn calculations
   	unsigned char Bn, Fn;
@@ -263,7 +263,12 @@ int main(int argc, char** argv)
 		printf("can not open file\n");
 		return 1;
 	}	
-  	unsigned char **output = (unsigned char**) malloc (sizeof(unsigned char*)*height*width);
+  	int **output = (int**) malloc (sizeof(int*)*height);
+	for(i = 0 ;i< height; i++)
+	{
+		output[i] = (int*) malloc (sizeof(int)*width);
+	}
+
   	for(i = 0; i<fg_count; i++)
   	{
   		int x = fg_points[i][0];
@@ -278,7 +283,13 @@ int main(int argc, char** argv)
   		output[x][y] = 0;
   	}
 
-	fwrite(output, sizeof(unsigned char),width*height, fp);
+	for(i=0; i<height; i++)
+	{
+		fwrite(output[i], sizeof(int),width, fp);
+		fwrite("\n",sizeof(char),1,fp);
+	}
+cout<<output[100][100]<<endl;
+
 	fclose(fp);
 
 
