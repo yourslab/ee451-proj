@@ -101,16 +101,16 @@ int main(int argc, char** argv)
 
   int bg_i = 0, fg_i =1, unk_i = 2;
   int bg_count = 0;
-int  fg_count = 0;
-int unk_count = 0;
+  int  fg_count = 0;
+  int unk_count = 0;
 
 
   for(int k = 0; k < 50; k++)
   {
 
   	bg_count = 0;
-	fg_count = 0;
-	unk_count = 0;
+  	fg_count = 0;
+  	unk_count = 0;
   	//initial bucket allocation	
     for(i = 0; i< height; i++)
     {
@@ -145,11 +145,12 @@ int unk_count = 0;
       }
     }
 
+
     //recalculate centroids
-    unsigned char sum = 0;
+    double sum = 0;
     for(i = 0; i < bg_count; i++)
     {
-    	unsigned char cur = cluster[bg_centroid][i];
+    	unsigned char cur = cluster[bg_i][i];
     	sum += cur;
     }
     bg_centroid = sum/bg_count;
@@ -157,7 +158,7 @@ int unk_count = 0;
     sum = 0;
     for(i = 0; i < fg_count; i++)
     {
-    	unsigned char cur = cluster[fg_centroid][i];
+    	unsigned char cur = cluster[fg_i][i];
     	sum += cur;
     }
     fg_centroid = sum/fg_count;
@@ -195,8 +196,9 @@ int unk_count = 0;
   	unsigned char x = unk_points[i][0];
   	unsigned char y = unk_points[i][1];
 
-  	for(j = 0; j < 5; j++)
+  	/*for(j = 0; j < 5; j++)
   	{
+      cout << j << endl;;
   		for( k = 0; k < 5; k++)
   		{
   			if(x-2+j < 0 && y-2+k <0) region[j+k] = image[0][0][background];
@@ -209,7 +211,8 @@ int unk_count = 0;
    			else if(y-2+k >= width) region[j+k] = image[x-2+j][width - 1][background];
  			else region[j+k] = image[x-2+j][y-2+j][background];
   		}
-  	}
+  	}*/
+    cout << "qual test" << endl;  
 
   	//Bn and Fn calculations
   	unsigned char Bn, Fn;
