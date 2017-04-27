@@ -32,12 +32,17 @@ int*** getYCbCr(string filename) {
 		}
 	}
 
+	ofstream myfile;
+	myfile.open ("example.txt");
+
 	CImg<unsigned char> img2;
-	img2 = img1.get_RGBtoYCbCr().get_channel(2);
+	img2 = img1.get_RGBtoYCbCr();
 
 	for (int r = 0; r < height; r++) {
 		for (int c = 0; c < width; c++) {
-			yCbCrArray[r][c][0] = (int)img2(c,r,0,0);
+			for (int i = 0; i < 3; i++) {
+				yCbCrArray[r][c][i] = (int)img2(c,r,0,i);
+			}
 		}
 	}
 /*
@@ -81,23 +86,23 @@ int main(int argc, char** argv)
 	double fg_centroid = bg_centroid + dev;
 	double unk_centroid = alpha* abs(bg_centroid - fg_centroid);
 
-	unsigned char **cluster = (unsigned char**) malloc (sizeof(unsigned char*)*3);
+	int **cluster = (int**) malloc (sizeof(int*)*3);
 	for (i = 0; i < 3; ++i) {
-	cluster[i] = (unsigned char*) malloc (sizeof(unsigned char)*height*width);
+		cluster[i] = (int*) malloc (sizeof(int)*height*width);
 	}
 
-	unsigned char **unk_points = (unsigned char**) malloc (sizeof(unsigned char*)*height*width);
+	int **unk_points = (int**) malloc (sizeof(int*)*height*width);
 	for (i = 0; i < height * width; ++i) {
-	unk_points[i] = (unsigned char*) malloc (sizeof(unsigned char)*2);
+		unk_points[i] = (int*) malloc (sizeof(int)*2);
 	}
 
-	unsigned char **fg_points = (unsigned char**) malloc (sizeof(unsigned char*)*height*width);
+	int **fg_points = (int**) malloc (sizeof(int*)*height*width);
 	for (i = 0; i < height * width; ++i) {
-	fg_points[i] = (unsigned char*) malloc (sizeof(unsigned char)*2);
+		fg_points[i] = (int*) malloc (sizeof(int)*2);
 	}
-	unsigned char **bg_points = (unsigned char**) malloc (sizeof(unsigned char*)*height*width);
+	int **bg_points = (int**) malloc (sizeof(int*)*height*width);
 	for (i = 0; i < height * width; ++i) {
-	bg_points[i] = (unsigned char*) malloc (sizeof(unsigned char)*2);
+		bg_points[i] = (int*) malloc (sizeof(int)*2);
 	}
 
 	int bg_i = 0, fg_i =1, unk_i = 2;
@@ -109,153 +114,155 @@ int main(int argc, char** argv)
 	for(int k = 0; k < 1; k++)
 	{
 
-	bg_count = 0;
-	fg_count = 0;
-	unk_count = 0;
-	//initial bucket allocation 
-	for(i = 0; i< height; i++)
-	{
-		for(j =0; j<width; j++)
+		bg_count = 0;
+		fg_count = 0;
+		unk_count = 0;
+		//initial bucket allocation 
+		for(i = 0; i< height; i++)
 		{
-		unsigned char cur_pixel = image[i][j][background];
-		unsigned char distance_bg = abs(cur_pixel - bg_centroid);
-		unsigned char distance_fg = abs(cur_pixel - fg_centroid);
-		unsigned char distance_unk = abs(cur_pixel - unk_centroid);
+			for(j =0; j<width; j++)
+			{
+				int cur_pixel = image[i][j][background];
+				int distance_bg = abs(cur_pixel - bg_centroid);
+				int distance_fg = abs(cur_pixel - fg_centroid);
+				int distance_unk = abs(cur_pixel - unk_centroid);
 
-		if ((i == 500 || i == 200)&& j == 600) {
-			cout << "distance_bg " << (int)distance_bg << endl;
-			cout << "distance_fg " << (int)distance_fg << endl;
-			cout << "distance_unk " << (int)distance_unk << endl; 
+				if(distance_bg < distance_fg && distance_bg < distance_unk)
+				{
+					cluster[bg_i][bg_count] = cur_pixel;
+					bg_points[bg_count][0] = i;
+					bg_points[bg_count][1] = j;
+					bg_count++;
 				}
+				else if(distance_fg < distance_bg && distance_fg <  distance_unk)
+				{
+					cluster[fg_i][fg_count] = cur_pixel;
+					fg_points[fg_count][0] = i;
+					fg_points[fg_count][1] = j;
+					fg_count++;
+				}
+				else
+				{
+					cluster[unk_i][unk_count] = cur_pixel;
+					unk_points[unk_count][0] = i;
+					unk_points[unk_count][1] = j;
+					unk_count++;
+				}
+			}
+		}
 
-		if(distance_bg < distance_fg && distance_bg < distance_unk)
+
+		//recalculate centroids
+		double sum = 0;
+		for(i = 0; i < bg_count; i++)
 		{
-			cluster[bg_i][bg_count] = cur_pixel;
-			bg_points[bg_count][0] = i;
-			bg_points[bg_count][1] = j;
-			bg_count++;
+			int cur = cluster[bg_i][i];
+			sum += cur;
 		}
-		else if(distance_fg < distance_bg && distance_fg <  distance_unk)
+		bg_centroid = sum/bg_count;
+
+		sum = 0;
+		for(i = 0; i < fg_count; i++)
 		{
-			cluster[fg_i][fg_count] = cur_pixel;
-			fg_points[fg_count][0] = i;
-			fg_points[fg_count][1] = j;
-			fg_count++;
+			int cur = cluster[fg_i][i];
+			sum += cur;
 		}
-		else
-		{
-			cluster[unk_i][unk_count] = cur_pixel;
-			unk_points[unk_count][0] = i;
-			unk_points[unk_count][1] = j;
-			unk_count++;
-		}
-		}
-	}
+		fg_centroid = sum/fg_count;
 
-
-	//recalculate centroids
-	double sum = 0;
-	for(i = 0; i < bg_count; i++)
-	{
-		unsigned char cur = cluster[bg_i][i];
-		sum += cur;
-	}
-	bg_centroid = sum/bg_count;
-
-	sum = 0;
-	for(i = 0; i < fg_count; i++)
-	{
-		unsigned char cur = cluster[fg_i][i];
-		sum += cur;
-	}
-	fg_centroid = sum/fg_count;
-
-	unk_centroid = alpha* abs(bg_centroid - fg_centroid);
+		unk_centroid = alpha* abs(bg_centroid - fg_centroid);
 
 	}
 
 	//UNKNOWN
-	unsigned char *region = (unsigned char*) malloc (sizeof(unsigned char*)*25);
+	int *region = (int*) malloc (sizeof(int*)*25);
 
-	unsigned char B_max = cluster[bg_i][0]; 
-	unsigned char F_max = cluster[fg_i][0];
-	unsigned char B_min = cluster[bg_i][0]; 
-	unsigned char F_min = cluster[fg_i][0];
+	int B_max = cluster[bg_i][0]; 
+	int F_max = cluster[fg_i][0];
+	int B_min = cluster[bg_i][0]; 
+	int F_min = cluster[fg_i][0];
 
 	for(i = 0; i< bg_count; i++)
 	{
-	if( cluster[bg_i][i] < B_max) B_max = cluster[bg_i][i];
+		if(cluster[bg_i][i] < B_max) {
+			B_max = cluster[bg_i][i];
+		}
 
-	if( cluster[bg_i][i] > B_min) B_min = cluster[bg_i][i];
+		if(cluster[bg_i][i] > B_min) {
+			B_min = cluster[bg_i][i];
+		}
 	}
 
 	for(i =0; i<fg_count; i++)
 	{
-	if( cluster[fg_i][i] < F_max) F_max = cluster[fg_i][i];
+		if(cluster[fg_i][i] < F_max) {
+			F_max = cluster[fg_i][i];
+		}
 
-	if( cluster[fg_i][i] > F_min) F_min = cluster[fg_i][i];
+		if(cluster[fg_i][i] > F_min) {
+			F_min = cluster[fg_i][i];
+		}
 	}
 
 	//Unknown bucket allocation
 	for(i = 0; i < unk_count ; i++)
 	{
-	unsigned char cur_unk_pixel = cluster[unk_i][i];
-	unsigned char x = unk_points[i][0];
-	unsigned char y = unk_points[i][1];
+		int cur_unk_pixel = cluster[unk_i][i];
+		int x = unk_points[i][0];
+		int y = unk_points[i][1];
 
-	/*for(j = 0; j < 5; j++)
-	{
-		cout << j << endl;;
-		for( k = 0; k < 5; k++)
+		/*for(j = 0; j < 5; j++)
 		{
-			if(x-2+j < 0 && y-2+k <0) region[j+k] = image[0][0][background];
-			else if(x-2+j >= height && y-2+k <0 ) region[j+k] = image[height-1][0][background];
-			else if(x-2+j < 0 && y-2+k >= width) region[j+k] = image[0][width -1][background];      
-			else if(x-2+j < 0) region[j+k] = image[0][y-2+k][background];
-			else if(y-2+k < 0) region[j+k] = image[x-2+j][0][background];
-			else if(x-2+j >= height && y-2+k >= width) region[j+k] = image[height-1][width -1][background];
-			else if(x-2+j >= height) region[j+k] = image[height-1][y-2+k][background];
-			else if(y-2+k >= width) region[j+k] = image[x-2+j][width - 1][background];
-			else region[j+k] = image[x-2+j][y-2+j][background];
+			cout << j << endl;;
+			for( k = 0; k < 5; k++)
+			{
+				if(x-2+j < 0 && y-2+k <0) region[j+k] = image[0][0][background];
+				else if(x-2+j >= height && y-2+k <0 ) region[j+k] = image[height-1][0][background];
+				else if(x-2+j < 0 && y-2+k >= width) region[j+k] = image[0][width -1][background];      
+				else if(x-2+j < 0) region[j+k] = image[0][y-2+k][background];
+				else if(y-2+k < 0) region[j+k] = image[x-2+j][0][background];
+				else if(x-2+j >= height && y-2+k >= width) region[j+k] = image[height-1][width -1][background];
+				else if(x-2+j >= height) region[j+k] = image[height-1][y-2+k][background];
+				else if(y-2+k >= width) region[j+k] = image[x-2+j][width - 1][background];
+				else region[j+k] = image[x-2+j][y-2+j][background];
+			}
+		}*/
+
+
+		//Bn and Fn calculations
+		int Bn, Fn;
+		if( B_max - B_min > X_CONSTANT)
+		{
+			Bn = bg_centroid;
 		}
-	}*/
+		else
+		{
+			Bn = B_max;
+		}
 
+		if( F_max - F_min > X_CONSTANT)
+		{
+			Fn = fg_centroid;
+		}
+		else
+		{
+			Fn = F_max;
+		}
 
-	//Bn and Fn calculations
-	unsigned char Bn, Fn;
-	if( B_max - B_min > X_CONSTANT)
-	{
-		Bn = bg_centroid;
-	}
-	else
-	{
-		Bn = B_max;
-	}
-
-	if( F_max - F_min > X_CONSTANT)
-	{
-		Fn = fg_centroid;
-	}
-	else
-	{
-		Fn = F_max;
-	}
-
-	//Assign UNKOWN 
-	if(abs(Fn - cur_unk_pixel) < abs(cur_unk_pixel - Bn))
-	{
-		cluster[fg_i][fg_count] = cur_unk_pixel;
-		fg_points[fg_count][0] = x;
-		fg_points[fg_count][1] = y;
-		fg_count++;
-	}
-	else
-	{
-		cluster[bg_i][bg_count] = cur_unk_pixel;
-		bg_points[bg_count][0] = x;
-		bg_points[bg_count][1] = y;
-		bg_count++;         
-	}
+		//Assign UNKOWN 
+		if(abs(Fn - cur_unk_pixel) < abs(cur_unk_pixel - Bn))
+		{
+			cluster[fg_i][fg_count] = cur_unk_pixel;
+			fg_points[fg_count][0] = x;
+			fg_points[fg_count][1] = y;
+			fg_count++;
+		}
+		else
+		{
+			cluster[bg_i][bg_count] = cur_unk_pixel;
+			bg_points[bg_count][0] = x;
+			bg_points[bg_count][1] = y;
+			bg_count++;         
+		}
 	}
 
 	if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) { perror("clock gettime");}       
@@ -263,20 +270,13 @@ int main(int argc, char** argv)
 
 		// print out the execution time here
 	printf("Execution time = %f sec\n", time);      
-	
 
-	//OUTPUT
-	if (!(fp=fopen(output_file,"wb"))) {
-		printf("can not open file\n");
-		return 1;
-	}   
-	
 	int **output = (int**) malloc (sizeof(int*)*height);
 	for(i = 0 ;i< height; i++)
 	{
 		output[i] = (int*) malloc (sizeof(int)*width);
 	}
-
+	
 	for(i = 0; i<fg_count; i++)
 	{
 		int x = fg_points[i][0];
@@ -298,13 +298,11 @@ int main(int argc, char** argv)
 	for(i=0; i<height; i++)
 	{
 		for(j=0; j<width; j++) {
-			myfile << i << " " << j << " " << output[i][j] << endl;
+			if (output[i][j]) {
+				myfile << i << " " << j << endl;
+			}
 		}
-		myfile << endl;
 	}
-
-	fclose(fp);
-
 
 	//END
 	return 0;
