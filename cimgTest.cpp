@@ -67,6 +67,9 @@ int main(int argc, char** argv)
 	struct timespec start, stop; 
 	double time;
 
+	ofstream myfile;
+	myfile.open ("example.txt");
+
 	if( clock_gettime(CLOCK_REALTIME, &start) == -1) { perror("clock gettime");}
 
 	//Mico, Kyle Start
@@ -107,11 +110,11 @@ int main(int argc, char** argv)
 
 	int bg_i = 0, fg_i =1, unk_i = 2;
 	int bg_count = 0;
-	int  fg_count = 0;
+	int fg_count = 0;
 	int unk_count = 0;
 
 
-	for(int k = 0; k < 1; k++)
+	for(int k = 0; k < 50; k++)
 	{
 
 		bg_count = 0;
@@ -291,17 +294,22 @@ int main(int argc, char** argv)
 		output[x][y] = 0;
 	}
 
-
-	ofstream myfile;
-	myfile.open ("example.txt");
-
+	unsigned char black = 0;
 	for(i=0; i<height; i++)
 	{
 		for(j=0; j<width; j++) {
-			if (output[i][j]) {
-				myfile << i << " " << j << endl;
+			if (!output[i][j]) {
+				img1(j,i,0,0) = black;
+				img1(j,i,0,1) = black;
+				img1(j,i,0,2) = black;
 			}
 		}
+	}
+
+
+	CImgDisplay main_disp(img1,"Click a point");
+	while (!main_disp.is_closed()) {
+    	main_disp.wait();
 	}
 
 	//END
