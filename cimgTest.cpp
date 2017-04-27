@@ -87,7 +87,11 @@ int main(int argc, char** argv)
 	
 	double bg_centroid = image[0][0][background];
 	double fg_centroid = bg_centroid + dev;
-	double unk_centroid = alpha* abs(bg_centroid - fg_centroid);
+	double unk_centroid = alpha*abs(bg_centroid - fg_centroid);
+
+	double bg_centroid_prev = 0;
+	double fg_centroid_prev = 0;
+	double unk_centroid_prev = 0;
 
 	int **cluster = (int**) malloc (sizeof(int*)*3);
 	for (i = 0; i < 3; ++i) {
@@ -113,8 +117,8 @@ int main(int argc, char** argv)
 	int fg_count = 0;
 	int unk_count = 0;
 
-
-	for(int k = 0; k < 50; k++)
+	int num_iters = 1;
+	for(int k = 0; k < num_iters; k++)
 	{
 
 		bg_count = 0;
@@ -174,7 +178,21 @@ int main(int argc, char** argv)
 
 		unk_centroid = alpha* abs(bg_centroid - fg_centroid);
 
+		// Check for convergence
+		if(round(bg_centroid) == round(bg_centroid_prev) && 
+		   round(fg_centroid) == round(fg_centroid_prev) &&
+		   round(unk_centroid) == round(unk_centroid_prev)) {
+			break;
+		}
+
+		bg_centroid_prev = bg_centroid;
+		fg_centroid_prev = fg_centroid;
+		unk_centroid_prev = unk_centroid;
+
+		num_iters++;
 	}
+
+	printf("Convergence at k = %d\n", num_iters);  
 
 	//UNKNOWN
 	int *region = (int*) malloc (sizeof(int*)*25);
