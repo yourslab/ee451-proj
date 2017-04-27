@@ -192,7 +192,7 @@ int main(int argc, char** argv)
 		num_iters++;
 	}
 
-	printf("Convergence at k = %d\n", num_iters);  
+	printf("Convergence at num_iters = %d\n", num_iters);  
 
 	//UNKNOWN
 	int *region = (int*) malloc (sizeof(int*)*25);
