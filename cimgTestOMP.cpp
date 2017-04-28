@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 	double totalTime = 0.0f;
 
 	for (int objectIndex = 0; objectIndex < 6; objectIndex++) {
-		for (int imageIndex = 0; imageIndex < 33; imageIndex++) {
+		for (int imageIndex = 0; imageIndex < 9; imageIndex++) {
 			std::ostringstream ss;
 			ss << "images/" << inputObjectName[objectIndex] << "." << setfill('0') << setw(3) << imageIndex << ".jpg";
 			filename = ss.str();
