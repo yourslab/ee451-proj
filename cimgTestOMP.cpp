@@ -14,9 +14,6 @@
 using namespace std;
 using namespace cimg_library;
 
-#define input_file  "input.raw"
-#define output_file "output.txt"
-
 #define SCHEDULE static
 #define THREADS 1
 #define BLOCK_SIZE 128
@@ -307,14 +304,7 @@ int main(int argc, char** argv)
 					bg_points[bg_count][1] = y;
 					bg_count++;         
 				}
-			}
-
-			if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) { perror("clock gettime");}       
-				time = (stop.tv_sec - start.tv_sec)+ (double)(stop.tv_nsec - start.tv_nsec)/1e9;
-
-				// print out the execution time here
-			printf("Execution time = %f sec\n", time); 
-			totalTime += time;     
+			}     
 
 			int **output = (int**) malloc (sizeof(int*)*height);
 			#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE)
@@ -354,6 +344,12 @@ int main(int argc, char** argv)
 
 
 			//Display here if you want
+			if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) { perror("clock gettime");}       
+				time = (stop.tv_sec - start.tv_sec)+ (double)(stop.tv_nsec - start.tv_nsec)/1e9;
+
+				// print out the execution time here
+			printf("Execution time = %f sec\n", time); 
+			totalTime += time;
 
 
 			//Deallocation to support opening multiple images

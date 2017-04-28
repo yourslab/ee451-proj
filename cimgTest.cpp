@@ -14,9 +14,6 @@
 using namespace std;
 using namespace cimg_library;
 
-#define input_file  "input.raw"
-#define output_file "output.txt"
-
 //Returns 3D Array of YCbCr Values for each pixel with [height][width][YCbCr (Y - 0, Cb - 1, Cr -2]
 int*** getYCbCr(CImg<unsigned char> img1) {
 	int width = img1.width();
@@ -291,13 +288,6 @@ int main(int argc, char** argv)
 				}
 			}
 
-			if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) { perror("clock gettime");}       
-				time = (stop.tv_sec - start.tv_sec)+ (double)(stop.tv_nsec - start.tv_nsec)/1e9;
-
-				// print out the execution time here
-			printf("Execution time = %f sec\n", time);      
-			totalTime += time;
-
 			int **output = new int*[height];
 			for(i = 0 ;i< height; i++)
 			{
@@ -331,6 +321,12 @@ int main(int argc, char** argv)
 			}
 
 			//Display here if you want
+			if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) { perror("clock gettime");}       
+				time = (stop.tv_sec - start.tv_sec)+ (double)(stop.tv_nsec - start.tv_nsec)/1e9;
+
+				// print out the execution time here
+			printf("Execution time = %f sec\n", time);      
+			totalTime += time;
 
 
 			//Deallocation to support opening multiple images
