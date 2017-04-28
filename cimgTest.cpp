@@ -74,8 +74,8 @@ int main(int argc, char** argv)
 
 	//Mico, Kyle Start
 	FILE* fp;
-	int  dev = 60, X_CONSTANT =128;
-	double alpha = .5; //NEED TO SET
+	int  dev = 40, X_CONSTANT =128;
+	double alpha = 0.5; //NEED TO SET
 	int Cr = 2, Cb = 1, Y=0;
 	int background = Cr;
 	int i,j,k; //loop variables
@@ -87,11 +87,10 @@ int main(int argc, char** argv)
 	
 	double bg_centroid = image[0][0][background];
 	double fg_centroid = bg_centroid + dev;
-	double unk_centroid = alpha*abs(bg_centroid - fg_centroid);
+	double distance_unk = alpha*abs(bg_centroid - fg_centroid);
 
 	double bg_centroid_prev = 0;
 	double fg_centroid_prev = 0;
-	double unk_centroid_prev = 0;
 
 	int **cluster = (int**) malloc (sizeof(int*)*3);
 	for (i = 0; i < 3; ++i) {
@@ -117,7 +116,7 @@ int main(int argc, char** argv)
 	int fg_count = 0;
 	int unk_count = 0;
 
-	int num_iters = 1;
+	int num_iters = 50;
 	for(int k = 0; k < num_iters; k++)
 	{
 
@@ -130,30 +129,28 @@ int main(int argc, char** argv)
 			for(j =0; j<width; j++)
 			{
 				int cur_pixel = image[i][j][background];
-				int distance_bg = abs(cur_pixel - bg_centroid);
-				int distance_fg = abs(cur_pixel - fg_centroid);
-				int distance_unk = abs(cur_pixel - unk_centroid);
+				int distance_bg = pow(cur_pixel - bg_centroid, 2.0);
+				int distance_fg = pow(cur_pixel - fg_centroid, 2.0);
 
-				if(distance_bg < distance_fg && distance_bg < distance_unk)
+				if(abs(distance_bg - distance_fg) < distance_unk) {
+					cluster[unk_i][unk_count] = cur_pixel;
+					unk_points[unk_count][0] = i;
+					unk_points[unk_count][1] = j;
+					unk_count++;
+				}
+				else if(distance_bg < distance_fg)
 				{
 					cluster[bg_i][bg_count] = cur_pixel;
 					bg_points[bg_count][0] = i;
 					bg_points[bg_count][1] = j;
 					bg_count++;
 				}
-				else if(distance_fg < distance_bg && distance_fg <  distance_unk)
+				else 
 				{
 					cluster[fg_i][fg_count] = cur_pixel;
 					fg_points[fg_count][0] = i;
 					fg_points[fg_count][1] = j;
 					fg_count++;
-				}
-				else
-				{
-					cluster[unk_i][unk_count] = cur_pixel;
-					unk_points[unk_count][0] = i;
-					unk_points[unk_count][1] = j;
-					unk_count++;
 				}
 			}
 		}
@@ -176,20 +173,20 @@ int main(int argc, char** argv)
 		}
 		fg_centroid = sum/fg_count;
 
-		unk_centroid = alpha* abs(bg_centroid - fg_centroid);
+		distance_unk = alpha* abs(bg_centroid - fg_centroid);
 
 		// Check for convergence
 		if(round(bg_centroid) == round(bg_centroid_prev) && 
-		   round(fg_centroid) == round(fg_centroid_prev) &&
-		   round(unk_centroid) == round(unk_centroid_prev)) {
+		   round(fg_centroid) == round(fg_centroid_prev)) {
 			break;
 		}
 
 		bg_centroid_prev = bg_centroid;
 		fg_centroid_prev = fg_centroid;
-		unk_centroid_prev = unk_centroid;
 
-		num_iters++;
+		//num_iters++;
+
+		cout << "infinite test" << endl;
 	}
 
 	printf("Convergence at num_iters = %d\n", num_iters);  
