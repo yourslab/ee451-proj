@@ -184,7 +184,7 @@ int main(int argc, char** argv)
 		bg_centroid_prev = bg_centroid;
 		fg_centroid_prev = fg_centroid;
 
-		//num_iters++;
+		num_iters++;
 
 		cout << "infinite test" << endl;
 	}
