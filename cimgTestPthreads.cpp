@@ -181,14 +181,14 @@ int*** getYCbCr(CImg<unsigned char> img1) {
 
 int main(int argc, char** argv) 
 {
-	const string inputObjectName[] = {"flipphones", "forks", "hammers", "keyboards", "mugs", "pliers", "scissors", "staplers", "telephones", "watches"};
+	const string inputObjectName[] = {"flipphones", "forks", "hammers", "mugs", "pliers", "scissors"};
 	string filename;
 	CImg<unsigned char> img1;
 	int i,j,k; //loop variables
 
 	double totalTime = 0.0f;
-	for (int objectIndex = 0; objectIndex < 4; objectIndex++) {
-		for (int imageIndex = 0; imageIndex < 25; imageIndex++) {
+	for (int objectIndex = 0; objectIndex < 6; objectIndex++) {
+		for (int imageIndex = 0; imageIndex < 9; imageIndex++) {
 			pthread_t threads[THREADS];
 			int *thread_ids[THREADS];
 			int rc;
