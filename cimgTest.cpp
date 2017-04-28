@@ -338,36 +338,36 @@ int main(int argc, char** argv)
 
 			for(i = 0 ;i< height; i++)
 			{
-				delete output[i];
+				delete[] output[i];
 			}
 			delete output;
 
 			for (i = 0; i < 3; ++i) {
-				delete cluster[i];
+				delete[] cluster[i];
 			}
 			delete cluster;
 
 			for (i = 0; i < height * width; ++i) {
-				delete unk_points[i];
+				delete[] unk_points[i];
 			}
 			delete unk_points;
 
 			for (i = 0; i < height * width; ++i) {
-				delete fg_points[i];
+				delete[] fg_points[i];
 			}
 			delete fg_points;
 
 			for (i = 0; i < height * width; ++i) {
-				delete bg_points[i];
+				delete[] bg_points[i];
 			}
 			delete bg_points;
 
 
 			for (int i = 0; i < height; i++) {
 				for (int j = 0; j < width; j++) {
-					delete image[i][j];
+					delete[] image[i][j];
 				}
-				delete image[i];
+				delete[] image[i];
 			}
 
 		}
