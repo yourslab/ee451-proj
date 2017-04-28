@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <omp.h>
 #include <time.h>
 #include <sys/time.h>
 #include <cmath> 
@@ -16,6 +15,10 @@ using namespace cimg_library;
 #define input_file  "input.raw"
 #define output_file "output.txt"
 
+#define SCHEDULE static
+#define THREADS 128
+#define BLOCK_SIZE 128
+
 //Returns 3D Array of YCbCr Values for each pixel with [height][width][YCbCr (Y - 0, Cb - 1, Cr -2]
 int*** getYCbCr(string filename) {
 	CImg<unsigned char> img1(filename.c_str());
@@ -25,9 +28,9 @@ int*** getYCbCr(string filename) {
 	int ***yCbCrArray;
 
 	yCbCrArray = new int**[height];
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for (int i = 0; i < height; ++i) {
 		yCbCrArray[i] = new int*[width];
-
 		for (int j = 0; j < width; ++j) {
 			yCbCrArray[i][j] = new int[3];
 		}
@@ -39,6 +42,7 @@ int*** getYCbCr(string filename) {
 	CImg<unsigned char> img2;
 	img2 = img1.get_RGBtoYCbCr();
 
+	#pragma omp parallel for collapse(3) num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for (int r = 0; r < height; r++) {
 		for (int c = 0; c < width; c++) {
 			for (int i = 0; i < 3; i++) {
@@ -75,8 +79,8 @@ int main(int argc, char** argv)
 
 	//Mico, Kyle Start
 	FILE* fp;
-	int  dev = 60, X_CONSTANT =128;
-	double alpha = .5; //NEED TO SET
+	int  dev = 40, X_CONSTANT =128;
+	double alpha = 0.5; //NEED TO SET
 	int Cr = 2, Cb = 1, Y=0;
 	int background = Cr;
 	int i,j,k; //loop variables
@@ -88,27 +92,30 @@ int main(int argc, char** argv)
 	
 	double bg_centroid = image[0][0][background];
 	double fg_centroid = bg_centroid + dev;
-	double unk_centroid = alpha*abs(bg_centroid - fg_centroid);
+	double distance_unk = alpha*abs(bg_centroid - fg_centroid);
 
 	double bg_centroid_prev = 0;
 	double fg_centroid_prev = 0;
-	double unk_centroid_prev = 0;
 
 	int **cluster = (int**) malloc (sizeof(int*)*3);
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for (i = 0; i < 3; ++i) {
 		cluster[i] = (int*) malloc (sizeof(int)*height*width);
 	}
 
 	int **unk_points = (int**) malloc (sizeof(int*)*height*width);
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for (i = 0; i < height * width; ++i) {
 		unk_points[i] = (int*) malloc (sizeof(int)*2);
 	}
 
 	int **fg_points = (int**) malloc (sizeof(int*)*height*width);
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for (i = 0; i < height * width; ++i) {
 		fg_points[i] = (int*) malloc (sizeof(int)*2);
 	}
 	int **bg_points = (int**) malloc (sizeof(int*)*height*width);
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for (i = 0; i < height * width; ++i) {
 		bg_points[i] = (int*) malloc (sizeof(int)*2);
 	}
@@ -119,42 +126,41 @@ int main(int argc, char** argv)
 	int unk_count = 0;
 
 	int num_iters = 1;
+
 	for(int k = 0; k < num_iters; k++)
 	{
 
 		bg_count = 0;
 		fg_count = 0;
 		unk_count = 0;
-		//initial bucket allocation 
+		//initial bucket allocation
 		for(i = 0; i< height; i++)
 		{
 			for(j =0; j<width; j++)
 			{
 				int cur_pixel = image[i][j][background];
-				int distance_bg = abs(cur_pixel - bg_centroid);
-				int distance_fg = abs(cur_pixel - fg_centroid);
-				int distance_unk = abs(cur_pixel - unk_centroid);
+				int distance_bg = pow(cur_pixel - bg_centroid, 2.0);
+				int distance_fg = pow(cur_pixel - fg_centroid, 2.0);
 
-				if(distance_bg < distance_fg && distance_bg < distance_unk)
+				if(abs(distance_bg - distance_fg) < distance_unk) {
+					cluster[unk_i][unk_count] = cur_pixel;
+					unk_points[unk_count][0] = i;
+					unk_points[unk_count][1] = j;
+					unk_count++;
+				}
+				else if(distance_bg < distance_fg)
 				{
 					cluster[bg_i][bg_count] = cur_pixel;
 					bg_points[bg_count][0] = i;
 					bg_points[bg_count][1] = j;
 					bg_count++;
 				}
-				else if(distance_fg < distance_bg && distance_fg <  distance_unk)
+				else 
 				{
 					cluster[fg_i][fg_count] = cur_pixel;
 					fg_points[fg_count][0] = i;
 					fg_points[fg_count][1] = j;
 					fg_count++;
-				}
-				else
-				{
-					cluster[unk_i][unk_count] = cur_pixel;
-					unk_points[unk_count][0] = i;
-					unk_points[unk_count][1] = j;
-					unk_count++;
 				}
 			}
 		}
@@ -162,6 +168,7 @@ int main(int argc, char** argv)
 
 		//recalculate centroids
 		double sum = 0;
+		#pragma omp parallel for reduction(+:sum) num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 		for(i = 0; i < bg_count; i++)
 		{
 			int cur = cluster[bg_i][i];
@@ -170,6 +177,7 @@ int main(int argc, char** argv)
 		bg_centroid = sum/bg_count;
 
 		sum = 0;
+		#pragma omp parallel for reduction(+:sum) num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 		for(i = 0; i < fg_count; i++)
 		{
 			int cur = cluster[fg_i][i];
@@ -177,22 +185,22 @@ int main(int argc, char** argv)
 		}
 		fg_centroid = sum/fg_count;
 
-		unk_centroid = alpha* abs(bg_centroid - fg_centroid);
+		distance_unk = alpha* abs(bg_centroid - fg_centroid);
 
 		// Check for convergence
 		if(round(bg_centroid) == round(bg_centroid_prev) && 
-		   round(fg_centroid) == round(fg_centroid_prev) &&
-		   round(unk_centroid) == round(unk_centroid_prev)) {
+		   round(fg_centroid) == round(fg_centroid_prev)) {
 			break;
 		}
 
 		bg_centroid_prev = bg_centroid;
 		fg_centroid_prev = fg_centroid;
-		unk_centroid_prev = unk_centroid;
 
 		num_iters++;
 	}
 
+	printf("static scheduling\n");
+	printf("num_threads = %d\n", THREADS); 
 	printf("Convergence at num_iters = %d\n", num_iters);  
 
 	//UNKNOWN
@@ -203,6 +211,7 @@ int main(int argc, char** argv)
 	int B_min = cluster[bg_i][0]; 
 	int F_min = cluster[fg_i][0];
 
+	#pragma omp parallel for simd num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for(i = 0; i< bg_count; i++)
 	{
 		if(cluster[bg_i][i] < B_max) {
@@ -214,6 +223,7 @@ int main(int argc, char** argv)
 		}
 	}
 
+	#pragma omp parallel for simd num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for(i =0; i<fg_count; i++)
 	{
 		if(cluster[fg_i][i] < F_max) {
@@ -225,6 +235,7 @@ int main(int argc, char** argv)
 		}
 	}
 
+	#pragma omp parallel for simd num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	//Unknown bucket allocation
 	for(i = 0; i < unk_count ; i++)
 	{
@@ -294,11 +305,13 @@ int main(int argc, char** argv)
 	printf("Execution time = %f sec\n", time);      
 
 	int **output = (int**) malloc (sizeof(int*)*height);
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for(i = 0 ;i< height; i++)
 	{
 		output[i] = (int*) malloc (sizeof(int)*width);
 	}
 	
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for(i = 0; i<fg_count; i++)
 	{
 		int x = fg_points[i][0];
@@ -306,6 +319,7 @@ int main(int argc, char** argv)
 		output[x][y] = 1;
 	}
 
+	#pragma omp parallel for num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for(i = 0; i<bg_count; i++)
 	{
 		int x = bg_points[i][0];
@@ -314,6 +328,7 @@ int main(int argc, char** argv)
 	}
 
 	unsigned char black = 0;
+	#pragma omp parallel for collapse(2) num_threads(THREADS) schedule(SCHEDULE, BLOCK_SIZE)
 	for(i=0; i<height; i++)
 	{
 		for(j=0; j<width; j++) {
