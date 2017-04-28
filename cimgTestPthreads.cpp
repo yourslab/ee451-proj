@@ -18,7 +18,8 @@ using namespace cimg_library;
 #define input_file  "input.raw"
 #define output_file "output.txt"
 
-#define THREADS 2
+#define THREADS 8
+#define BLOCK_SIZE 3
 
 struct thread_data {
 	int tid;
@@ -26,6 +27,8 @@ struct thread_data {
 	int widthEnd;
 	int heightStart;
 	int heightEnd;
+	int width;
+	int height;
 	int ***image;
 	int **output;
 	int background;
@@ -55,6 +58,9 @@ void *AssignToCluster(void *threadarg) {
 	int widthEnd = my_data->widthEnd;
 	int heightStart = my_data->heightStart;
 	int heightEnd = my_data->heightEnd;
+
+	int width = my_data->width;
+	int height = my_data->height;
 
 	int ***image = my_data->image;
 	int **output = my_data->output;
@@ -87,36 +93,39 @@ void *AssignToCluster(void *threadarg) {
 	int i,j,k;
 
 	//initial bucket allocation 
-	for(i = heightStart; i < heightEnd; i++)
+	for(k = 0; k < height/BLOCK_SIZE; k++) 
 	{
-		for(j = widthStart; j < widthEnd; j++)
+		for(i = tid * BLOCK_SIZE + k * BLOCK_SIZE * THREADS; i < (tid + 1) * BLOCK_SIZE + k * BLOCK_SIZE * THREADS && i < height; i++)
 		{
-			int cur_pixel = image[i][j][background];
-			int distance_bg = pow(cur_pixel - bg_centroid, 2.0);
-			int distance_fg = pow(cur_pixel - fg_centroid, 2.0);
+			for(j = widthStart; j < widthEnd; j++)
+			{
+				int cur_pixel = image[i][j][background];
+				int distance_bg = pow(cur_pixel - bg_centroid, 2.0);
+				int distance_fg = pow(cur_pixel - fg_centroid, 2.0);
 
-			if(abs(distance_bg - distance_fg) < distance_unk) {
-				int unk_count = unkClusterSize[tid];
-				cluster[tid][unk_i][unk_count] = cur_pixel;
-				unk_points[tid][unk_count][0] = i;
-				unk_points[tid][unk_count][1] = j;
-				unkClusterSize[tid]++;
-			}
-			else if(distance_bg < distance_fg)
-			{
-				int bg_count = bgClusterSize[tid];
-				cluster[tid][bg_i][bg_count] = cur_pixel;
-				bg_points[tid][bg_count][0] = i;
-				bg_points[tid][bg_count][1] = j;
-				bgClusterSize[tid]++;
-			}
-			else 
-			{
-				int fg_count = fgClusterSize[tid];
-				cluster[tid][fg_i][fg_count] = cur_pixel;
-				fg_points[tid][fg_count][0] = i;
-				fg_points[tid][fg_count][1] = j;
-				fgClusterSize[tid]++;
+				if(abs(distance_bg - distance_fg) < distance_unk) {
+					int unk_count = unkClusterSize[tid];
+					cluster[tid][unk_i][unk_count] = cur_pixel;
+					unk_points[tid][unk_count][0] = i;
+					unk_points[tid][unk_count][1] = j;
+					unkClusterSize[tid]++;
+				}
+				else if(distance_bg < distance_fg)
+				{
+					int bg_count = bgClusterSize[tid];
+					cluster[tid][bg_i][bg_count] = cur_pixel;
+					bg_points[tid][bg_count][0] = i;
+					bg_points[tid][bg_count][1] = j;
+					bgClusterSize[tid]++;
+				}
+				else 
+				{
+					int fg_count = fgClusterSize[tid];
+					cluster[tid][fg_i][fg_count] = cur_pixel;
+					fg_points[tid][fg_count][0] = i;
+					fg_points[tid][fg_count][1] = j;
+					fgClusterSize[tid]++;
+				}
 			}
 		}
 	}
@@ -286,6 +295,8 @@ int main(int argc, char** argv)
 					thread_data_array[i].widthEnd = width;
 					thread_data_array[i].heightStart = height/THREADS * i;
 					thread_data_array[i].heightEnd = height/THREADS * (i+1);
+					thread_data_array[i].width = width;
+					thread_data_array[i].height = height;
 					thread_data_array[i].image = image;
 					thread_data_array[i].output = output;
 					thread_data_array[i].background = background;
