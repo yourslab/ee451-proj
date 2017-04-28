@@ -60,13 +60,13 @@ int*** getYCbCr(CImg<unsigned char> img1) {
 
 int main(int argc, char** argv) 
 {
-	const string inputObjectName[] = {"flipphones", "forks", "hammers", "mugs", "pliers", "scissors", "watches"};
+	const string inputObjectName[] = {"flipphones", "forks", "hammers", "mugs", "pliers", "scissors"};
 	string filename;
 	CImg<unsigned char> img1;
 	double totalTime = 0.0f;
 
-	for (int objectIndex = 0; objectIndex < 7; objectIndex++) {
-		for (int imageIndex = 0; imageIndex < 28; imageIndex++) {
+	for (int objectIndex = 0; objectIndex < 6; objectIndex++) {
+		for (int imageIndex = 0; imageIndex < 33; imageIndex++) {
 			std::ostringstream ss;
 			ss << "images/" << inputObjectName[objectIndex] << "." << setfill('0') << setw(3) << imageIndex << ".jpg";
 			filename = ss.str();
