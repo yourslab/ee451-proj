@@ -19,7 +19,7 @@ using namespace cimg_library;
 #define output_file "output.txt"
 
 #define THREADS 8
-#define BLOCK_SIZE 3
+#define BLOCK_SIZE 8
 
 struct thread_data {
 	int tid;
@@ -91,9 +91,9 @@ void *AssignToCluster(void *threadarg) {
 	int bg_i = 0, fg_i =1, unk_i = 2;
 
 	int i,j,k;
-
+	
 	//initial bucket allocation 
-	for(k = 0; k < height/BLOCK_SIZE; k++) 
+	for(k = 0; k < height/(BLOCK_SIZE * THREADS); k++) 
 	{
 		for(i = tid * BLOCK_SIZE + k * BLOCK_SIZE * THREADS; i < (tid + 1) * BLOCK_SIZE + k * BLOCK_SIZE * THREADS && i < height; i++)
 		{
@@ -196,8 +196,10 @@ int main(int argc, char** argv)
 	int i,j,k; //loop variables
 
 	double totalTime = 0.0f;
-	for (int objectIndex = 0; objectIndex < 6; objectIndex++) {
-		for (int imageIndex = 0; imageIndex < 9; imageIndex++) {
+	for (int objectIndex = 0; objectIndex < 6; objectIndex++) 
+	{
+		for (int imageIndex = 0; imageIndex < 9; imageIndex++) 
+		{
 			pthread_t threads[THREADS];
 			int *thread_ids[THREADS];
 			int rc;
@@ -363,110 +365,119 @@ int main(int argc, char** argv)
 
 			printf("Convergence at num_iters = %d\n", num_iters);  
 
-			/*int B_max = 255; 
-			int F_max = 255;
-			int B_min = 0; 
-			int F_min = 0;
+			int B_max = 0; 
+			int F_max = 0;
+			int B_min = 255;
+			int F_min = 255;
 
-			for(i = 0; i< bg_count; i++)
+			for(i = 0; i < THREADS; i++) 
 			{
-				if(cluster[bg_i][i] < B_max) {
-					B_max = cluster[bg_i][i];
-				}
+				for(j = 0; j < bgClusterSize[i]; j++) 
+				{
+					if(cluster[i][bg_i][j] < B_max) {
+						B_max = cluster[i][bg_i][j];
+					}
 
-				if(cluster[bg_i][i] > B_min) {
-					B_min = cluster[bg_i][i];
+					if(cluster[i][bg_i][j] > B_min) {
+						B_min = cluster[i][bg_i][j];
+					}
 				}
 			}
 
-			for(i =0; i<fg_count; i++)
+			for(i = 0; i < THREADS; i++) 
 			{
-				if(cluster[fg_i][i] < F_max) {
-					F_max = cluster[fg_i][i];
-				}
+				for(j = 0; j < fgClusterSize[i]; j++)
+				{
+					if(cluster[i][fg_i][j] < F_max) {
+						F_max = cluster[i][fg_i][j];
+					}
 
-				if(cluster[fg_i][i] > F_min) {
-					F_min = cluster[fg_i][i];
+					if(cluster[i][fg_i][j] > F_min) {
+						F_min = cluster[i][fg_i][j];
+					}
 				}
 			}
 
 			//Unknown bucket allocation
-			for(i = 0; i < unk_count ; i++)
+			for(i = 0; i < THREADS; i++) 
 			{
-				int cur_unk_pixel = cluster[unk_i][i];
-				int x = unk_points[i][0];
-				int y = unk_points[i][1];
+				for(j = 0; j < unkClusterSize[i] ; j++)
+				{
+					int cur_unk_pixel = cluster[i][unk_i][j];
+					int x = unk_points[i][j][0];
+					int y = unk_points[i][j][1];
 
-				// for(j = 0; j < 5; j++)
-				// {
-				// 	cout << j << endl;;
-				// 	for( k = 0; k < 5; k++)
-				// 	{
-				// 		if(x-2+j < 0 && y-2+k <0) region[j+k] = image[0][0][background];
-				// 		else if(x-2+j >= height && y-2+k <0 ) region[j+k] = image[height-1][0][background];
-				// 		else if(x-2+j < 0 && y-2+k >= width) region[j+k] = image[0][width -1][background];      
-				// 		else if(x-2+j < 0) region[j+k] = image[0][y-2+k][background];
-				// 		else if(y-2+k < 0) region[j+k] = image[x-2+j][0][background];
-				// 		else if(x-2+j >= height && y-2+k >= width) region[j+k] = image[height-1][width -1][background];
-				// 		else if(x-2+j >= height) region[j+k] = image[height-1][y-2+k][background];
-				// 		else if(y-2+k >= width) region[j+k] = image[x-2+j][width - 1][background];
-				// 		else region[j+k] = image[x-2+j][y-2+j][background];
-				// 	}
-				// }
+					// for(j = 0; j < 5; j++)
+					// {
+					// 	cout << j << endl;;
+					// 	for( k = 0; k < 5; k++)
+					// 	{
+					// 		if(x-2+j < 0 && y-2+k <0) region[j+k] = image[0][0][background];
+					// 		else if(x-2+j >= height && y-2+k <0 ) region[j+k] = image[height-1][0][background];
+					// 		else if(x-2+j < 0 && y-2+k >= width) region[j+k] = image[0][width -1][background];      
+					// 		else if(x-2+j < 0) region[j+k] = image[0][y-2+k][background];
+					// 		else if(y-2+k < 0) region[j+k] = image[x-2+j][0][background];
+					// 		else if(x-2+j >= height && y-2+k >= width) region[j+k] = image[height-1][width -1][background];
+					// 		else if(x-2+j >= height) region[j+k] = image[height-1][y-2+k][background];
+					// 		else if(y-2+k >= width) region[j+k] = image[x-2+j][width - 1][background];
+					// 		else region[j+k] = image[x-2+j][y-2+j][background];
+					// 	}
+					// }
 
 
-				//Bn and Fn calculations
-				int Bn, Fn;
-				if( B_max - B_min > X_CONSTANT)
-				{
-					Bn = bg_centroid;
-				}
-				else
-				{
-					Bn = B_max;
-				}
+					//Bn and Fn calculations
+					int Bn, Fn;
+					if( B_max - B_min > X_CONSTANT)
+					{
+						Bn = bg_centroid;
+					}
+					else
+					{
+						Bn = B_max;
+					}
 
-				if( F_max - F_min > X_CONSTANT)
-				{
-					Fn = fg_centroid;
-				}
-				else
-				{
-					Fn = F_max;
-				}
+					if( F_max - F_min > X_CONSTANT)
+					{
+						Fn = fg_centroid;
+					}
+					else
+					{
+						Fn = F_max;
+					}
 
-				//Assign UNKOWN 
-				if(abs(Fn - cur_unk_pixel) < abs(cur_unk_pixel - Bn))
-				{
-					cluster[fg_i][fg_count] = cur_unk_pixel;
-					fg_points[fg_count][0] = x;
-					fg_points[fg_count][1] = y;
-					fg_count++;
-				}
-				else
-				{
-					cluster[bg_i][bg_count] = cur_unk_pixel;
-					bg_points[bg_count][0] = x;
-					bg_points[bg_count][1] = y;
-					bg_count++;         
+					//Assign UNKOWN 
+					if(abs(Fn - cur_unk_pixel) < abs(cur_unk_pixel - Bn))
+					{
+						cluster[i][fg_i][fgClusterSize[i]] = cur_unk_pixel;
+						fg_points[i][fgClusterSize[i]][0] = x;
+						fg_points[i][fgClusterSize[i]][1] = y;
+						fgClusterSize[i]++;
+					}
+					else
+					{
+						cluster[i][bg_i][bgClusterSize[i]] = cur_unk_pixel;
+						bg_points[i][bgClusterSize[i]][0] = x;
+						bg_points[i][bgClusterSize[i]][1] = y;
+						bgClusterSize[i]++;         
+					}
 				}
 			}
 
+			for(i = 0; i < THREADS; i++) {		
+				for(j = 0; j < fgClusterSize[i]; j++)
+				{
+					int x = fg_points[i][j][0];
+					int y = fg_points[i][j][1];
+					output[x][y] = 1;
+				}
 
-			
-			for(i = 0; i<fg_count; i++)
-			{
-				int x = fg_points[i][0];
-				int y = fg_points[i][1];
-				output[x][y] = 1;
+				for(j = 0; j < bgClusterSize[i]; j++)
+				{
+					int x = bg_points[i][j][0];
+					int y = bg_points[i][j][1];
+					output[x][y] = 0;
+				}
 			}
-
-			for(i = 0; i<bg_count; i++)
-			{
-				int x = bg_points[i][0];
-				int y = bg_points[i][1];
-				output[x][y] = 0;
-			}*/
 
 			if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) { perror("clock gettime");}       
 				time = (stop.tv_sec - start.tv_sec)+ (double)(stop.tv_nsec - start.tv_nsec)/1e9;
@@ -476,7 +487,7 @@ int main(int argc, char** argv)
 			
 			totalTime += time;
 
-/*			unsigned char black = 0;
+			unsigned char black = 0;
 			for(i=0; i<height; i++)
 			{
 				for(j=0; j<width; j++) {
@@ -487,7 +498,11 @@ int main(int argc, char** argv)
 					}
 				}
 			}
-*/
+
+			CImgDisplay main_disp(img1,"Click a point");
+			while (!main_disp.is_closed()) {
+		    	main_disp.wait();
+			}
 			//Display here if you want
 
 			free(thread_data_array);
@@ -550,6 +565,7 @@ int main(int argc, char** argv)
 		}
 	}
 	printf("Execution total time = %f sec\n", totalTime);      
+
 
 	//END
 	return 0;
